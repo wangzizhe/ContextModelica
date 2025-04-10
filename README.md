@@ -1,14 +1,12 @@
 # ContextModelica
 
-A modular framework for modeling and simulating **Variable Structure Systems (VSS)** using the [Functional Mock-up Interface (FMI)](https://fmi-standard.org/) and **context-aware mode switching using Context Petri Nets**.
+A modular framework for simulating Modelica **Variable Structure Systems (VSS)** using the [Functional Mock-up Interface (FMI)](https://fmi-standard.org/) and **context-aware mode switching using [Context Petri Nets](https://wangzizhe.github.io/CoPN)**.
 
 ## ✨ Features
 
 - 🔧 **FMUVSS** – Intuitive FMU-based simulation of VSS without external control models.
 - 🔁 **ContextFMUVSS** – Integrates Context Petri Nets for expressive and formal mode-switching logic.
 - 🧬 **ModeGen** – Extracts submodels from monolithic Modelica code/Single Underlying Layer (SUM) and exports them as individual FMUs.
-
----
 
 ## 📦 Modules
 
@@ -27,7 +25,6 @@ This module enables **formal state management** using **Context Petri Nets**, of
 - **Use when:** you need complex and state-dependent transitions.
 - **Features:** Context relationships like weak/strong inclusion, exclusion, and requirement. 
   - Learn more: [Context Relationships | CoPN](https://wangzizhe.github.io/CoPN/docs/Overview/ContextRelationships.html)
-
 
 ### 3. `ModeGen`
 
