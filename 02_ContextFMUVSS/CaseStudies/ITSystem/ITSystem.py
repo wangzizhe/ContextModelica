@@ -1,8 +1,9 @@
 # Using SNAKES for building Petri Net
 from snakes.nets import PetriNet, Place, Transition, Value, Expression, Inhibitor
-from pyfmi import load_fmu
+from pyfmi import load_fmu # type: ignore
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 
 # --- Set up the Context Petri Net ---
 net = PetriNet('ContextPetriNets')
@@ -240,12 +241,17 @@ all_modes_log = np.column_stack((
 time_log_hours = time_log / 3600
 
 # Create a figure with three vertically-stacked subplots.
-fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(12, 18), sharex=True)
+fig, (ax1, ax2, ax3) = plt.subplots(
+    3, 1,
+    figsize=(10, 8),
+    sharex=True,
+    gridspec_kw={'height_ratios': [1, 0.3, 0.3]}
+)
 
 # -------------------
 # Diagram 1: Hydrogen Production vs Load Demand
-ax1.plot(time_log_hours, production_log, label='Hydrogen Production', color='blue')
-ax1.plot(time_log_hours, demand_log, label='Load Demand', linestyle='--', color='red')
+ax1.plot(time_log_hours, production_log, label='Hydrogen Production', color='green')
+ax1.plot(time_log_hours, demand_log, label='Load Demand', linestyle='--', color='blue')
 ax1.set_title('Hydrogen Production vs Load Demand')
 ax1.set_ylabel('Values')
 ax1.legend()
@@ -256,20 +262,29 @@ ax1.grid(True)
 ax2.plot(time_log_hours, supply_log[:, 0], label='Green Supply', color='green')
 ax2.plot(time_log_hours, supply_log[:, 1], label='Hybrid Supply', color='orange')
 ax2.set_title('Energy Supply Modes')
-ax2.set_ylabel('Active (Yes = 1, No = 0)')
+ax2.set_ylabel('Active? (Yes = 1)')
 ax2.legend(loc='upper right')
 ax2.grid(True)
 
 # -------------------
 # Diagram 3: IT Operation Modes
-ax3.plot(time_log_hours, energy_modes_log[:, 0], label='Energy Saving Mode', color='purple')
-ax3.plot(time_log_hours, energy_modes_log[:, 1], label='Normal Mode', color='brown')
-ax3.plot(time_log_hours, energy_modes_log[:, 2], label='High Performance Mode', color='black')
+ax3.plot(time_log_hours, energy_modes_log[:, 0], label='Energy Saving', color='green')
+ax3.plot(time_log_hours, energy_modes_log[:, 1], label='Normal', color='brown')
+ax3.plot(time_log_hours, energy_modes_log[:, 2], label='High Performance', color='red')
 ax3.set_title('IT Operation Modes')
-ax3.set_ylabel('Active (Yes = 1, No = 0)')
+ax3.set_ylabel('Active? (Yes = 1)')
 ax3.set_xlabel('Time (hours)')
 ax3.legend(loc='upper right')
 ax3.grid(True)
+
+# Set x-axis to display only integer hours for all subplots
+for ax in [ax1, ax2, ax3]:
+    ax.xaxis.set_major_locator(ticker.MaxNLocator(integer=True))
+
+# Set only 0 and 1 as y-ticks with integer formatting for ax2 and ax3
+for ax in [ax2, ax3]:
+    ax.set_yticks([0, 1])
+    ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
 plt.tight_layout()
 plt.show()
