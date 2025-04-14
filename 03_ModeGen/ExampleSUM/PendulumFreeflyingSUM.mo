@@ -8,24 +8,21 @@ model PendulumFreeflyingSUM
   //# [all]
   parameter Real m = 1; // Bob mass
   parameter Real g = 9.81; // Gravity
+  Real y;
 
   //# [pendulum]
   parameter Real L = 2; // Pendulum length
 
   //# [pendulum]
-  Real phi(start=0); // Pendulum angle
-  Real dphi(start=-2); // Angular velocity
-  Real x; // Position
-  Real y; // Position
-  Real dx; // Velocity
-  Real dy; // Velocity
+  Real phi(start=0);
+  Real dphi(start=2);
+  Real x(start=-2);
+  Real dx, dy;
   Real F; 
   
   //# [freeflying]
-  Real x(start=2);  
-  Real y(start=-2);
-  Real vx(start=1);
-  Real vy(start=0);
+  Real x;  
+  Real vx, vy;
 
 @#equation
   //# [pendulum]
@@ -38,7 +35,7 @@ model PendulumFreeflyingSUM
   F = m * g * cos(phi) + m * L * dphi^2;
   
   //# [freeflying]
-  vx = der(x); // Velocity = derivative of position
-  vy = der(y); // Velocity in y
-  m * der(vx) = 0; // No force in x
-  m * der(vy) = -m * g; // Gravity in y
+  vx = der(x);
+  vy = der(y);
+  m * der(vx) = 0;
+  m * der(vy) = -m * g;
