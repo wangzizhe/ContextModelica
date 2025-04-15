@@ -1,4 +1,5 @@
-model PendulumFMI2
+package PendulumFreeflying
+model Pendulum
   parameter Real m = 1;  // Bob mass
   parameter Real g = 9.81; // Gravity
   parameter Real L = 2; // Pendulum length
@@ -20,4 +21,23 @@ equation
   der(dphi) = -g/L * sin(phi);
   F = m * g * cos(phi) + m * L * dphi^2;
 
-end PendulumFMI2;
+end Pendulum;
+model Freeflying
+  parameter Real m = 1;  // Bob mass
+  parameter Real g = 9.81; // Gravity
+  parameter Real L = 2;
+  Real x;  // Position
+  Real y; // Position
+  Real vx;  // Velocity in x
+  Real vy;  // Velocity in y
+  Real r;
+
+equation
+  vx = der(x); // Velocity = derivative of position
+  vy = der(y); // Velocity in y
+  m * der(vx) = 0; // No force in x
+  m * der(vy) = -m * g; // Gravity in y
+  r = sqrt(x^2 + y^2);
+
+end Freeflying;
+end PendulumFreeflying;

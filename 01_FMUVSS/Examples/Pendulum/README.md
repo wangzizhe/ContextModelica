@@ -1,15 +1,10 @@
 # Structure Overview
 
-## 📁 Modelica Models
+## 📁 Root Folder
 
-Source models written in Modelica:
+Main script and FMUs.
 
-- `Pendulum.mo` - Pendulum system model
-- `Freeflying.mo` - Freeflying system model
-
-------
-
-## 📁 FMU Models
+## 📁 Experiment Folder
 
 Exported FMUs (Functional Mock-up Units) for both FMI (2.0/3.0) standards:
 
@@ -23,9 +18,7 @@ Exported FMUs (Functional Mock-up Units) for both FMI (2.0/3.0) standards:
 - `PendulumFMI3.0.fmu`
 - `FreeflyingFMI3.0.fmu`
 
-------
-
-## 📁 Simulation Scripts
+---
 
 These Python scripts to simulate the FMUs using the corresponding FMI standard.
 
@@ -40,6 +33,15 @@ These scripts integrate Petri Net logic for more advanced control strategies dur
 
 - `PN_FMI2.0.py`
 - `PN_FMI3.0.py`
+
+## 📁 Model Folder
+
+Source models written in Modelica:
+
+* `PendulumFreeflying.mo` - Package with both models
+
+- `Pendulum.mo` - Pendulum model
+- `Freeflying.mo` - Freeflying model
 
 ## 👓 Example
 

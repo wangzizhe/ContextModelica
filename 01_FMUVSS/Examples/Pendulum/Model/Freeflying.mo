@@ -1,4 +1,4 @@
-model FreeflyingFMI2
+model Freeflying
   parameter Real m = 1;  // Bob mass
   parameter Real g = 9.81; // Gravity
   parameter Real L = 2;
@@ -15,4 +15,4 @@ equation
   m * der(vy) = -m * g; // Gravity in y
   r = sqrt(x^2 + y^2);
 
-end FreeflyingFMI2;
+end Freeflying;
