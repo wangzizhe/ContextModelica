@@ -79,7 +79,7 @@ FINAL RESULT: ALL MODES PASS
 The two submodels have been generated and successfully checked:
 
 ```modelica
-model PendulumFreeflyingSUM_pendulum
+model PendulumFreeflyingSUM_Pendulum
   Real phi(start=0);
   Real dphi(start=-2);
   parameter Real m = 1;
@@ -93,7 +93,9 @@ equation
   dy = der(y); 
   dphi = der(phi); 
   der(dphi) = -g/L * sin(phi); 
-end PendulumFreeflyingSUM_pendulum;
+end PendulumFreeflyingSUM_Pendulum;
+```
+```modelica
 model PendulumFreeflyingSUM_freeflying
   Real x(start=2); 
   Real y(start=-2); 
@@ -109,4 +111,4 @@ equation
 end PendulumFreeflyingSUM_freeflying; 
 ```
 
-More examples: `ModeGen/SUM`
+More examples: `ModeGen/ExampleSUM`
