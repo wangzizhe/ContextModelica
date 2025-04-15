@@ -70,7 +70,7 @@ class ModelicaAnnotationParser:
             mode_match = self.MODE_TAG.search(line)
             if mode_match:
                 mode_name = mode_match.group(1)
-                current_modes = {mode_name} if mode_name != "all" else set(modes.keys())
+                current_modes = {mode_name} if mode_name != "All" else set(modes.keys())
                 continue
 
             # Handle model start (find the start of the model block)
