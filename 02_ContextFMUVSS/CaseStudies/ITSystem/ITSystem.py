@@ -243,17 +243,17 @@ time_log_hours = time_log / 3600
 # Create a figure with three vertically-stacked subplots.
 fig, (ax1, ax2, ax3) = plt.subplots(
     3, 1,
-    figsize=(10, 8),
+    figsize=(10, 6),
     sharex=True,
     gridspec_kw={'height_ratios': [1, 0.3, 0.3]}
 )
 
 # -------------------
 # Diagram 1: Hydrogen Production vs Load Demand
-ax1.plot(time_log_hours, production_log, label='Hydrogen Production', color='green')
+ax1.plot(time_log_hours, production_log, label='Hydrogen Produced Power', color='green')
 ax1.plot(time_log_hours, demand_log, label='Load Demand', linestyle='--', color='blue')
-ax1.set_title('Hydrogen Production vs Load Demand')
-ax1.set_ylabel('Values')
+ax1.set_title('Hydrogen Produced Power vs Load Demand')
+ax1.set_ylabel('kW')
 ax1.legend()
 ax1.grid(True)
 
