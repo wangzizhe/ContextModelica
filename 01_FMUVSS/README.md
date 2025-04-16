@@ -6,7 +6,7 @@ This framework enables developers to realize VSS through a user-friendly interfa
 
 Modify the configuration section in `FMUVSS.py` according to your needs, and then run it.
 
-```json
+```python
 # === Configuration ===
 config = {
     'simulation': {
