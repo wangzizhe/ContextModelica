@@ -8,10 +8,10 @@ config = {
         'initial_time': 0,
         'global_stop_time': 10,
         'step_size': 0.00001,
-        'initial_mode': 'Ball'
+        'initial_mode': 'SlidingBall'
     },
     'modes': {
-        'Ball': {
+        'SlidingBall': {
             'fmu_path': './Ball.fmu',
             'monitored_vars': ['y'],  
             'outputs': ['x', 'y', 'vx', 'vy'],
@@ -27,11 +27,11 @@ config = {
             'outputs': ['x', 'h', 'vx', 'vy'],
             'stop_condition': lambda vars: vars['h'] < vars['r'],
             'transition_mapping': {
-                'ContactBall': {'x' : 'x', 'h' : 'h', 'vx' : 'vx', 'vy' : 'v'}
+                'BouncingBall': {'x' : 'x', 'h' : 'h', 'vx' : 'vx', 'vy' : 'v'}
             },
-            'next_mode': 'ContactBall',
+            'next_mode': 'BouncingBall',
         },
-        'ContactBall': {
+        'BouncingBall': {
             'fmu_path': './ContactBall.fmu',
             'monitored_vars': ['mass.s', 'r'],
             'outputs': ['x', 'h', 'vx', 'v'],
@@ -43,18 +43,18 @@ config = {
         }
     },
     'plot': {
-        'x': 'time',
+        'x': 'x',
         'y': 'height',
         'variable_aliases': {
             'height': {
-                'Ball': 'y',
+                'SlidingBall': 'y',
                 'FlyingBall': 'h',
-                'ContactBall': 'h'
+                'BouncingBall': 'h'
             }
         },
-        'title': 'Bouncing Ball - Height vs Time',
-        'xlabel': 'Time [s]',
-        'ylabel': 'Height',
+        'title': 'Trajectory',
+        'xlabel': 'x',
+        'ylabel': 'y',
         'figsize': (6, 6)
     }
 }
