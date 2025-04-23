@@ -5,78 +5,35 @@ import matplotlib.pyplot as plt
 # === Configuration ===
 config = {
     'simulation': {
-        'initial_time': 0,
-        'global_stop_time': 100000,
-        'step_size': 0.01,
-        'initial_mode': 'PlanetRocket'
+        'initial_time': 0.0,
+        'global_stop_time': 10,
+        'step_size': 1e-5,
+        'initial_mode': 'Pendulum'
     },
     'modes': {
-        'PlanetRocket': {
-            'fmu_path': './PlanetRocket.fmu',
-            'monitored_vars': ['actualTime'],  
-            'outputs': ['rocket.x', 'rocket.height', 'rocket.vx', 'rocket.vy', 'rocket.v'],
-            'stop_condition': lambda vars: vars['actualTime'] > 480,
+        'Pendulum': {
+            'fmu_path': './model/PendulumFMI2.0.fmu',
+            'monitored_vars': ['F'],
+            'outputs': ['x', 'y', 'dx', 'dy', 'F'],
+            'stop_condition': lambda vars: vars['F'] < 0,
             'transition_mapping': {
-                'PlanetSatellite': {
-                    'rocket.height' : 'satellite.y', 
-                    'rocket.x' : 'satellite.x', 
-                    'rocket.vx' : 'satellite.vx', 
-                    'rocket.vy' : 'satellite.vy'}
+                'Freeflying': {'x': 'x', 'y': 'y', 'dx': 'vx', 'dy': 'vy'}
             },
-            'next_mode': 'PlanetSatellite',
+            'next_mode': 'Freeflying',
         },
-        'PlanetSatellite': {
-            'fmu_path': './PlanetSatellite.fmu',
-            'monitored_vars': ['satellite.loops'],
-            'outputs': ['satellite.x', 'satellite.y', 'satellite.vx', 'satellite.vy', 'satellite.v'],
-            'stop_condition': lambda vars: vars['satellite.loops'] == 5,
-            'transition_mapping': {
-                'PlanetSatelliteChange': {
-                    'satellite.y':'satellite.y', 
-                    'satellite.x': 'satellite.x', 
-                    'satellite.vx': 'satellite.vx', 
-                    'satellite.vy': 'satellite.vy'}
-            },
-            'next_mode': 'PlanetSatelliteChange',
-        },
-        'PlanetSatelliteChange': {
-            'fmu_path': './PlanetSatelliteChange.fmu',
-            'monitored_vars': ['currentTime', 'initialTime'],
-            'outputs': ['satellite.x', 'satellite.y', 'satellite.vx', 'satellite.vy', 'satellite.v'],
-            'stop_condition': lambda vars: vars['currentTime'] - vars['initialTime'] >= 50,
-            'transition_mapping': {
-                'PlanetSatellite': {
-                    'satellite.y':'satellite.y', 
-                    'satellite.x': 'satellite.x', 
-                    'satellite.vx': 'satellite.vx', 
-                    'satellite.vy': 'satellite.vy'}
-            },
-            'next_mode': 'PlanetSatellite',
+        'Freeflying': {
+            'fmu_path': './model/FreeflyingFMI2.0.fmu',
+            'monitored_vars': ['r', 'L'],
+            'outputs': ['x', 'y', 'r'],
+            'stop_condition': lambda vars: vars['r'] > vars['L']
         }
     },
-    'plot': {  
+    'plot': {
         'x': 'x',
-        'y': 'h',
-        'variable_aliases': {
-            # 'time': {
-            #     'PlanetRocket': 'actualTime',
-            #     'PlanetSatellite': 'time',
-            #     'PlanetSatelliteChange': 'currentTime'
-            # },
-            'x': {
-                'PlanetRocket': 'rocket.x',
-                'PlanetSatellite': 'satellite.x',
-                'PlanetSatelliteChange': 'satellite.x'
-            },
-            'h': { 
-                'PlanetRocket': 'rocket.height',
-                'PlanetSatellite': 'satellite.y',
-                'PlanetSatelliteChange': 'satellite.y'
-            },
-        },
-        'title': 'Trajectory',
+        'y': 'y',
+        'title': 'Pendulum-Freeflying Trajectory',
         'xlabel': 'X Position',
-        'ylabel': 'Altitude',
+        'ylabel': 'Y Position',
         'figsize': (6, 6)
     }
 }
@@ -87,9 +44,9 @@ class FMUVSS:
         self.sim_config = config['simulation']
         self.modes = config['modes']
         self.plot_config = config['plot']
-        self.step_size = self.sim_config.get('step_size', 0.01)
-        self.global_stop_time = self.sim_config.get('global_stop_time', 10.0)
-        self.current_time = self.sim_config.get('initial_time', 0.0)
+        self.step_size = self.sim_config.get('step_size')
+        self.global_stop_time = self.sim_config.get('global_stop_time')
+        self.current_time = self.sim_config.get('initial_time')
         self.current_mode_key = self.sim_config.get('initial_mode')
         self.results = []  # Each entry is a dictionary for a simulation mode instance.
 

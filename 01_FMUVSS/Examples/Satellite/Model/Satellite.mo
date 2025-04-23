@@ -164,19 +164,22 @@ package Satellite
   end PlanetSatellite;
 
   model PlanetSatelliteChange
-    Planet earth(M=5.976e24, G=6.670*10^(-11), r=6371000);
-    SatelliteChange satellite(M=earth.M, G=earth.G);
-  
-    parameter Real initialTime(fixed=false); // This will get initialized to time
+    Planet earth(M = 5.976e24, G = 6.670*10^(-11), r = 6371000);
+    SatelliteChange satellite(M = earth.M, G = earth.G);
+    parameter Real initialTime(fixed = false);
+    // This will get initialized to time
     Real currentTime;
-  
   initial equation
     initialTime = time;
-  
   equation
     currentTime = time;
-  
   end PlanetSatelliteChange;
+
+  model SatelliteVSS
+    PlanetRocket rocket annotation(FMI3_Partition(name="Rocket") );
+    PlanetSatellite satellite annotation(FMI3_Partition(name="Satellite") );
+    PlanetSatelliteChange satelliteChange  annotation(FMI3_Partition(name="SatelliteChange") );
+  end SatelliteVSS;
   
 annotation (uses(Modelica(version="4.0.0")));
 end Satellite;

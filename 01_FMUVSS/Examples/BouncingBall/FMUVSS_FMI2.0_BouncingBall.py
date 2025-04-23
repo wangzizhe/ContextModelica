@@ -7,12 +7,12 @@ config = {
     'simulation': {
         'initial_time': 0,
         'global_stop_time': 10,
-        'step_size': 0.00001,
+        'step_size': 1e-5,
         'initial_mode': 'SlidingBall'
     },
     'modes': {
         'SlidingBall': {
-            'fmu_path': './Ball.fmu',
+            'fmu_path': './model/BallFMI2.0.fmu',
             'monitored_vars': ['y'],  
             'outputs': ['x', 'y', 'vx', 'vy'],
             'stop_condition': lambda vars: vars['y'] < 10,
@@ -22,7 +22,7 @@ config = {
             'next_mode': 'FlyingBall',
         },
         'FlyingBall': {
-            'fmu_path': './FlyingBall.fmu',
+            'fmu_path': './model/FlyingBallFMI2.0.fmu',
             'monitored_vars': ['h', 'r'],
             'outputs': ['x', 'h', 'vx', 'vy'],
             'stop_condition': lambda vars: vars['h'] < vars['r'],
@@ -32,7 +32,7 @@ config = {
             'next_mode': 'BouncingBall',
         },
         'BouncingBall': {
-            'fmu_path': './ContactBall.fmu',
+            'fmu_path': './model/ContactBallFMI2.0.fmu',
             'monitored_vars': ['mass.s', 'r'],
             'outputs': ['x', 'h', 'vx', 'v'],
             'stop_condition': lambda vars: vars['mass.s'] > vars['r'],
@@ -65,9 +65,9 @@ class FMUVSS:
         self.sim_config = config['simulation']
         self.modes = config['modes']
         self.plot_config = config['plot']
-        self.step_size = self.sim_config.get('step_size', 0.01)
-        self.global_stop_time = self.sim_config.get('global_stop_time', 10.0)
-        self.current_time = self.sim_config.get('initial_time', 0.0)
+        self.step_size = self.sim_config.get('step_size')
+        self.global_stop_time = self.sim_config.get('global_stop_time')
+        self.current_time = self.sim_config.get('initial_time')
         self.current_mode_key = self.sim_config.get('initial_mode')
         self.results = []  # Each entry is a dictionary for a simulation mode instance.
 

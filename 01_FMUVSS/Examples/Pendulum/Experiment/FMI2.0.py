@@ -1,4 +1,4 @@
-from pyfmi import load_fmu
+from pyfmi import load_fmu # type: ignore
 import numpy as np
 import matplotlib.pyplot as plt
 

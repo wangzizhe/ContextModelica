@@ -2,6 +2,8 @@
 
 This framework enables developers to realize VSS through a user-friendly interface.
 
+Both FMI 2.0 and FMI 3.0 is supported.
+
 ## How To Use?
 
 Modify the configuration section in `FMUVSS.py` according to your needs, and then run it.
@@ -12,7 +14,7 @@ config = {
     'simulation': {
         'initial_time': 0,
         'global_stop_time': 10,
-        'step_size': 0.00001,
+        'step_size': 1e-5,
         'initial_mode': 'SlidingBall'
     },
     'modes': {

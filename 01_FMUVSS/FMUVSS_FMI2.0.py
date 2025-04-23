@@ -7,7 +7,7 @@ config = {
     'simulation': {
         'initial_time': 0.0,
         'global_stop_time': 10,
-        'step_size': 0.00001,
+        'step_size': 1e-5,
         'initial_mode': 'Pendulum'
     },
     'modes': {
@@ -45,9 +45,9 @@ class FMUVSS:
         self.sim_config = config['simulation']
         self.modes = config['modes']
         self.plot_config = config['plot']
-        self.step_size = self.sim_config.get('step_size', 0.01)
-        self.global_stop_time = self.sim_config.get('global_stop_time', 10.0)
-        self.current_time = self.sim_config.get('initial_time', 0.0)
+        self.step_size = self.sim_config.get('step_size')
+        self.global_stop_time = self.sim_config.get('global_stop_time')
+        self.current_time = self.sim_config.get('initial_time')
         self.current_mode_key = self.sim_config.get('initial_mode')
         self.results = []  # Each entry is a dictionary for a simulation mode instance.
 
