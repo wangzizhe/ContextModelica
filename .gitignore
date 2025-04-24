@@ -1,4 +1,6 @@
 *.log
+.gitignore
 01_FMUVSS/Examples/Pendulum/experiment/
 02_ContextFMUVSS/CaseStudies/CarSharingSystemCaseStudy/
+02_ContextFMUVSS/CaseStudies/ITSystem/Archive/
 02_ContextFMUVSS/CaseStudies/ITSystem/*.mo
