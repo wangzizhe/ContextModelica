@@ -1,8 +1,7 @@
 package Satellite
-
- import Modelica.Units.SI.*;
-  constant Real g0 = 9.81;
-  final constant Real pi = 2 * Modelica.Math.asin(1.0);
+  import Modelica.Units.SI.*;
+    constant Real g0 = 9.81;
+    final constant Real pi = 2 * Modelica.Math.asin(1.0);
 
   model Planet
     parameter Real G;
@@ -158,9 +157,7 @@ package Satellite
   model PlanetSatellite
     Planet earth(M=5.976e24, G=6.670*10^(-11), r=6371000);
     Satellite satellite(M=earth.M, G=earth.G);
-
   equation
-  
   end PlanetSatellite;
 
   model PlanetSatelliteChange
@@ -173,13 +170,6 @@ package Satellite
     initialTime = time;
   equation
     currentTime = time;
-  end PlanetSatelliteChange;
-
-  model SatelliteVSS
-    PlanetRocket rocket annotation(FMI3_Partition(name="Rocket") );
-    PlanetSatellite satellite annotation(FMI3_Partition(name="Satellite") );
-    PlanetSatelliteChange satelliteChange  annotation(FMI3_Partition(name="SatelliteChange") );
-  end SatelliteVSS;
-  
+  end PlanetSatelliteChange;  
 annotation (uses(Modelica(version="4.0.0")));
 end Satellite;
