@@ -15,10 +15,10 @@ config = {
         'SlidingBall': {
             'fmu_path': './model/BallFMI3.0.fmu',
             'monitored_vars': ['y'],  
-            'outputs': ['x', 'y', 'vx', 'vy'],
+            'outputs': ['x', 'y', 'der(x)', 'der(y)'],
             'stop_condition': lambda vars: vars['y'] < 10,
             'transition_mapping': {
-                'FlyingBall': {'x' : 'x', 'y' : 'h', 'vx' : 'vx', 'vy' : 'vy'}
+                'FlyingBall': {'x' : 'x', 'y' : 'h', 'der(x)' : 'vx', 'der(y)' : 'vy'}
             },
             'next_mode': 'FlyingBall',
         },
@@ -28,17 +28,17 @@ config = {
             'outputs': ['x', 'h', 'vx', 'vy'],
             'stop_condition': lambda vars: vars['h'] < vars['r'],
             'transition_mapping': {
-                'BouncingBall': {'x' : 'x', 'h' : 'h', 'vx' : 'vx', 'vy' : 'v'}
+                'BouncingBall': {'x' : 'x', 'h' : 'damper.s_rel', 'vx' : 'vx', 'vy' : 'damper.v_rel'}
             },
             'next_mode': 'BouncingBall',
         },
         'BouncingBall': {
             'fmu_path': './model/ContactBallFMI3.0.fmu',
             'monitored_vars': ['mass.s', 'r'],
-            'outputs': ['x', 'h', 'vx', 'v'],
+            'outputs': ['x', 'damper.s_rel', 'vx', 'damper.v_rel'],
             'stop_condition': lambda vars: vars['mass.s'] > vars['r'],
             'transition_mapping': {
-                'FlyingBall': {'x' : 'x', 'h' : 'h', 'vx' : 'vx', 'v' : 'vy'}
+                'FlyingBall': {'x' : 'x', 'damper.s_rel' : 'h', 'vx' : 'vx', 'damper.v_rel' : 'vy'}
             },
             'next_mode': 'FlyingBall',
         }
@@ -50,7 +50,7 @@ config = {
             'height': {
                 'SlidingBall': 'y',
                 'FlyingBall': 'h',
-                'BouncingBall': 'h'
+                'BouncingBall': 'damper.s_rel'
             }
         },
         'title': 'Trajectory',
