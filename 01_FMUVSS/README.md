@@ -89,23 +89,23 @@ All times are average values from two runs.
 
 #### FMUVSS
 
-| Model                               | Simulation Time (s) | Notes             |
-| ----------------------------------- | ------------------- | ----------------- |
-| Pendulum-Freeflying                 | **0.53**            | Pre-compiled FMUs |
-| SlidingBall-FlyingBall-BouncingBall | **3.34**            | Pre-compiled FMUs |
+| VSS Model   | Simulation Time (s) | Notes             |
+| ----------- | ------------------- | ----------------- |
+| Pendulum    | 0.53                | Pre-compiled FMUs |
+| SlidingBall | 3.34                | Pre-compiled FMUs |
 
 #### DySMo
 
-| Model                               | Total Time (s) | Compilation Time (s)                                       | Time Excl. Compilation (s) |
-| ----------------------------------- | -------------- | ---------------------------------------------------------- | -------------------------- |
-| Pendulum-Freeflying                 | 28.14          | Mode 1: 4.86 Mode 2: 4.59 \| **Total: 9.45**               | **18.69**                  |
-| SlidingBall-FlyingBall-BouncingBall | 95.58          | Mode 1: 5.03 Mode 2: 4.68 Mode 3: 4.79 \| **Total: 14.50** | **81.08**                  |
+| VSS Model   | Total Time (s) | Compilation Time (s)                                         | Time Excl. Compilation (s) |
+| ----------- | -------------- | ------------------------------------------------------------ | -------------------------- |
+| Pendulum    | 28.14          | Mode 1: 4.86, Mode 2: 4.59 \| **Total: 9.45**                | 18.69                      |
+| SlidingBall | 95.58          | Mode 1: 5.03, Mode 2: 4.68, Mode 3: 4.79 \| **Total: 14.50** | 81.08                      |
 
 #### Summary
 
-| Model                                   | Framework | Simulation Time Excl. Compilation (s) |
-| --------------------------------------- | --------- | ------------------------------------- |
-| **Pendulum-Freeflying**                 | FMUVSS    | **0.53**                              |
-|                                         | DySMo     | 18.69                                 |
-| **SlidingBall-FlyingBall-BouncingBall** | FMUVSS    | **3.34**                              |
-|                                         | DySMo     | 81.08                                 |
+| VSS Model   | Framework | Simulation Time  (s) |
+| ----------- | --------- | -------------------- |
+| Pendulum    | FMUVSS    | 0.53                 |
+|             | DySMo     | 18.69                |
+| SlidingBall | FMUVSS    | 3.34                 |
+|             | DySMo     | 81.08                |
