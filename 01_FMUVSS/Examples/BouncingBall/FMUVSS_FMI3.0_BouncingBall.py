@@ -8,7 +8,7 @@ config = {
     'simulation': {
         'initial_time': 0.0,
         'global_stop_time': 10.0,
-        'step_size': 1e-5,
+        'step_size': 1e-4,
         'initial_mode': 'SlidingBall'
     },
     'modes': {

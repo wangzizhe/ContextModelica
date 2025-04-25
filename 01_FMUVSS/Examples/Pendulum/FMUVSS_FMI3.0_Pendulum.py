@@ -8,12 +8,12 @@ config = {
     'simulation': {
         'initial_time': 0.0,
         'global_stop_time': 10.0,
-        'step_size': 1e-5,
+        'step_size': 1e-4,
         'initial_mode': 'Pendulum'
     },
     'modes': {
         'Pendulum': {
-            'fmu_path': './PendulumFMI3.0.fmu',
+            'fmu_path': './model/PendulumFMI3.0.fmu',
             'monitored_vars': ['F'],
             'outputs': ['x', 'y', 'dx', 'dy', 'F'],
             'stop_condition': lambda vars: vars['F'] < 0,
@@ -21,7 +21,7 @@ config = {
             'next_mode': 'Freeflying'
         },
         'Freeflying': {
-            'fmu_path': './FreeflyingFMI3.0.fmu',
+            'fmu_path': './model/FreeflyingFMI3.0.fmu',
             'monitored_vars': ['r', 'L'],
             'outputs': ['x', 'y', 'r'],
             'stop_condition': lambda vars: vars['r'] > vars['L']
