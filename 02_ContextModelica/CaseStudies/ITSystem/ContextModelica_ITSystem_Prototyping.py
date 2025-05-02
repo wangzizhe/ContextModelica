@@ -86,7 +86,7 @@ net.add_input('energySavingMode', 'Activate_normalMode', Inhibitor(Value(1)))
 net.add_input('highPerformanceMode', 'Activate_energySavingMode', Inhibitor(Value(1)))
 net.add_input('normalMode', 'Activate_energySavingMode', Inhibitor(Value(1)))
 
-# reate the additional arcs and transitions for the "requirement" relation
+# Create the additional arcs and transitions for the "requirement" relation
 net.add_input('hybridSupply', 'Activate_highPerformanceMode', Value(1))
 net.add_output('hybridSupply', 'Activate_highPerformanceMode', Value(1))
 net.add_transition(Transition('Deactivate_hybridSupply_duplicate', Expression('hydrogenProduction >= loadDemand')))
