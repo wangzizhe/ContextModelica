@@ -5,12 +5,12 @@
 
 import shutil
 import matplotlib.pyplot as plt
+import re
 from collections import defaultdict
 from itertools import permutations
 from snakes.nets import PetriNet, Place, Transition, Expression, Inhibitor, Value
 from fmpy import read_model_description, extract
 from fmpy.fmi3 import FMU3Slave
-import re
 
 # ============================
 # === 1) User Configuration
