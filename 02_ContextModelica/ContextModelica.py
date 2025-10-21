@@ -46,6 +46,104 @@ sim_cfg = {
     }
 }
 
+plot_cfg = {
+    # Context groups definition
+    'context_groups': {
+        '1': [
+            '1xxx',
+            '1yyy',
+            '1zzz'
+        ],
+        '2': [
+            '2xxx',
+            '2yyy',
+            '2zzz'
+        ]
+    },
+    
+    'figure': {
+        'figsize': (10, 15),
+        'height_ratios': [1, 1, 0.3, 0.3]  # 4 subplots
+    },
+    'subplots': [
+        # Subplot 1:
+        {
+            'title': '',
+            'ylabel': '',
+            'variables': ['', ''],
+            'labels': ['', ''],
+            'colors': ['', ''],
+            'linestyles': ['-', '--'],
+            'linewidth': 2
+        },
+        # Subplot 2: 
+        {
+            'title': '',
+            'ylabel': '',
+            'variables': [''],
+            'labels': [''],
+            'colors': [''],
+            'linestyles': ['-'],
+            'linewidth': 2
+        },
+        # Subplot 3: 
+        {
+            'title': '',
+            'ylabel': '',
+            'xlabel': None,
+            'type': '',
+            'aggregate': True, 
+            'contexts': [
+                '',    # Parent names (not the full context names)
+                ''
+            ],
+            'labels': [
+                '',
+                ''
+            ],
+            'colors': [
+                'green',
+                'red'
+            ],
+            'linewidth': 2,
+            'ylim': (-0.1, 1.1),
+            'yticks': [0, 1]
+        },
+        # Subplot 4: 
+        {
+            'title': '',
+            'ylabel': '',
+            'xlabel': '',
+            'type': '',
+            'aggregate': False,  # Individual contexts
+            'contexts': [
+                '',
+                ''
+            ],
+            'labels': [
+                '',
+                ''
+            ],
+            'colors': [
+                'purple',
+                'magenta'
+            ],
+            'linewidth': 2,
+            'ylim': (-0.1, 1.1),
+            'yticks': [0, 1]
+        }
+    ],
+    'mode_switches': {
+        'show': True,
+        'color': 'gray',
+        'linestyle': '--',
+        'alpha': 0.3,
+        'linewidth': 1
+    },
+    'grid': True,
+    'legend_loc': 'best'
+}
+
 # ============================
 # === 2) Petri Net Builder
 # ============================
