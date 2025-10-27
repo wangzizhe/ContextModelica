@@ -17,8 +17,10 @@ from fmpy.fmi3 import FMU3Slave
 # ============================
 context_cfg = {
     'places': {
-        'NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor':      {'initial': 0},
-        'NormalOperation+ExcessPower+ElectrolyzerActive':      {'initial': 0},
+        # NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor
+        'H2SafetyMonitor':      {'initial': 0},
+        # NormalOperation+ExcessPower+ElectrolyzerActive
+        'ElectrolyzerActive':      {'initial': 0},
         'NormalOperation+ExcessPower':      {'initial': 0},
         'NormalOperation+DeficitPower':    {'initial': 0},
         'EmergencyMode+ExcessPower':      {'initial': 0},
@@ -26,29 +28,31 @@ context_cfg = {
     },
     'globals': ['battery.SOC', 'h2Tank.mass', 'netPower'],
     'guards': {
-        'Activate_NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor':     'battery.SOC > 0.3 and h2Tank.mass < 1 and netPower > 0',
-        'Deactivate_NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor':   'battery.SOC <= 0.3 or h2Tank.mass >= 1 or netPower <= 0',
-        'Activate_NormalOperation+ExcessPower+ElectrolyzerActive':     'battery.SOC > 0.3 and h2Tank.mass < 1 and netPower > 0',
-        'Deactivate_NormalOperation+ExcessPower+ElectrolyzerActive':   'battery.SOC <= 0.3 or h2Tank.mass >= 1 or netPower <= 0',
-        'Activate_NormalOperation+ExcessPower':     'battery.SOC > 0.3 and netPower > 0',
-        'Deactivate_NormalOperation+ExcessPower':   'battery.SOC <= 0.3 or netPower <= 0',
-        'Activate_NormalOperation+DeficitPower':     'battery.SOC > 0.3 and netPower < 0',
-        'Deactivate_NormalOperation+DeficitPower':   'battery.SOC <= 0.3 or netPower >= 0',
-        'Activate_EmergencyMode+ExcessPower':     'battery.SOC <= 0.3 and netPower > 0',
-        'Deactivate_EmergencyMode+ExcessPower':   'battery.SOC > 0.3 or netPower <= 0',
-        'Activate_EmergencyMode+DeficitPower':     'battery.SOC <= 0.3 and netPower < 0',
-        'Deactivate_EmergencyMode+DeficitPower':   'battery.SOC > 0.3 or netPower >= 0',
+        # If left undefined, the deactivation transition will be auto-generated as 'not Activation Transition'.
+        'Activate_H2SafetyMonitor':     
+            'battery.SOC > 0.3 and h2Tank.mass < 1 and netPower > 0',
+        'Activate_ElectrolyzerActive':     
+            'battery.SOC > 0.3 and h2Tank.mass < 1 and netPower > 0',
+        'Activate_NormalOperation+ExcessPower':     
+            'battery.SOC > 0.3 and netPower > 0',
+        'Activate_NormalOperation+DeficitPower':     
+            'battery.SOC > 0.3 and netPower < 0',
+        'Activate_EmergencyMode+ExcessPower':     
+            'battery.SOC < 0.3 and netPower > 0',
+        'Activate_EmergencyMode+DeficitPower':     
+            'battery.SOC <= 0.3 and netPower <= 0',
     },
+    'auto_generate_deactivation': True,  # Enable auto-generation
     'relations': {
         'exclusion': [
             [],
         ],
         'requirements': [
-            ['NormalOperation+ExcessPower+ElectrolyzerActive', 'NormalOperation+ExcessPower'],
-            ['NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor', 'NormalOperation+ExcessPower'],
+            ['ElectrolyzerActive', 'NormalOperation+ExcessPower'],
+            ['H2SafetyMonitor', 'NormalOperation+ExcessPower'],
         ],
         'weak_inclusions': [
-            ['NormalOperation+ExcessPower+ElectrolyzerActive', 'NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor']
+            ['ElectrolyzerActive', 'H2SafetyMonitor']
         ],
         'strong_inclusions': []
     }
@@ -59,41 +63,35 @@ sim_cfg = {
     'stop_time':    72000.0,
     'step_size':    10.0,
     'modes': {
-        'NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor': {
+        'H2SafetyMonitor': {
             'fmu':     'EnergySystem_Variant2.fmu',
             'outputs': ['battery.SOC', 'h2Tank.mass', 'netPower'],
             'parameters': {},
-            'stop_condition': lambda g: g['battery.SOC'] <= 0.3 or g['h2Tank.mass'] >= 1 or g['netPower'] <= 0
         },
-        'NormalOperation+ExcessPower+ElectrolyzerActive': {
+        'ElectrolyzerActive': {
             'fmu':     'EnergySystem_Variant2.fmu',
             'outputs': ['battery.SOC', 'h2Tank.mass', 'netPower'],
             'parameters': {},
-            'stop_condition': lambda g: g['battery.SOC'] <= 0.3 or g['h2Tank.mass'] >= 1 or g['netPower'] <= 0
         },
         'NormalOperation+ExcessPower': {
             'fmu':     'EnergySystem_Variant3.fmu',
             'outputs': ['battery.SOC', 'h2Tank.mass', 'netPower'],
             'parameters': {},
-            'stop_condition': lambda g: g['battery.SOC'] <= 0.3 or g['netPower'] <= 0
         },
         'NormalOperation+DeficitPower': {
             'fmu':     'EnergySystem_Variant1.fmu',
             'outputs': ['battery.SOC', 'h2Tank.mass', 'netPower'],
             'parameters': {},
-            'stop_condition': lambda g: g['battery.SOC'] <= 0.3 or g['netPower'] > 0
         },
         'EmergencyMode+ExcessPower': {
             'fmu':     'EnergySystem_Variant3.fmu',
             'outputs': ['battery.SOC', 'h2Tank.mass', 'netPower'],
             'parameters': {},
-            'stop_condition': lambda g: g['battery.SOC'] > 0.3 or g['netPower'] <= 0
         },
         'EmergencyMode+DeficitPower': {
             'fmu':     'EnergySystem.fmu',
             'outputs': ['battery.SOC', 'h2Tank.mass', 'netPower'],
             'parameters': {},
-            'stop_condition': lambda g: g['battery.SOC'] > 0.3 or g['netPower'] > 0
         },
     },
     'variable_mapping': {}
@@ -103,8 +101,8 @@ plot_cfg = {
     # Context groups definition
     'context_groups': {
         'NormalOperation': [
-            'NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor',
-            'NormalOperation+ExcessPower+ElectrolyzerActive',
+            'H2SafetyMonitor',
+            'ElectrolyzerActive',
             'NormalOperation+ExcessPower',
             'NormalOperation+DeficitPower'
         ],
@@ -170,8 +168,8 @@ plot_cfg = {
             'type': 'context_states',
             'aggregate': False,  # Individual contexts
             'contexts': [
-                'NormalOperation+ExcessPower+ElectrolyzerActive',
-                'NormalOperation+ExcessPower+ElectrolyzerActive+H2SafetyMonitor'
+                'ElectrolyzerActive',
+                'H2SafetyMonitor'
             ],
             'labels': [
                 'Electrolyzer Active',
@@ -204,9 +202,27 @@ class ContextPetriNet:
     def __init__(self, cfg):
         self.net = PetriNet('ContextPetriNet')
         self.globals = {g: 0 for g in cfg['globals']}
+        
+        # Auto-generate deactivation guards if enabled
+        self.guards = cfg['guards'].copy()
+        if cfg.get('auto_generate_deactivation', False):
+            self._auto_generate_deactivation_guards(cfg['guards'])
+        
         self._build_places(cfg['places'])
-        self._build_transitions(cfg['places'], cfg['guards'])
-        self._apply_relations(cfg['relations'], cfg['guards'])
+        self._build_transitions(cfg['places'], self.guards)
+        self._apply_relations(cfg['relations'], self.guards)
+    
+    def _auto_generate_deactivation_guards(self, guards):
+        """Auto-generate deactivation guards as negations of activation guards."""
+        for guard_name, guard_expr in guards.items():
+            if guard_name.startswith('Activate_'):
+                context_name = guard_name[9:]
+                deactivate_name = f'Deactivate_{context_name}'
+                
+                if deactivate_name not in guards:
+                    negated_expr = negate_guard_expression(guard_expr)
+                    self.guards[deactivate_name] = negated_expr
+                    print(f"Auto-generated: {deactivate_name} = {negated_expr}")
 
     def _preprocess_guard(self, guard_str):
         """
@@ -323,21 +339,95 @@ class ContextPetriNet:
             print(f"Warning: fire() reached maximum iterations ({max_iterations})")
 
 # ============================
-# === 3) FMU Wrapper
+# === 3.1) FMU Instance Helper
 # ============================
 class FMUInstance:
-    def __init__(self, fmu_path, name):
-        md = read_model_description(fmu_path)
-        unzip = extract(fmu_path)
+    def __init__(self, fmu_path, mode_name):
+        self._unzip = extract(fmu_path)
+        self._desc = read_model_description(self._unzip)
         self.fmu = FMU3Slave(
-            guid=md.guid,
-            unzipDirectory=unzip,
-            modelIdentifier=md.coSimulation.modelIdentifier,
-            instanceName=name
+            guid=self._desc.guid,
+            unzipDirectory=self._unzip,
+            modelIdentifier=self._desc.coSimulation.modelIdentifier,
+            instanceName=f"FMU_{mode_name}"
         )
-        self.refs = {v.name: v.valueReference for v in md.modelVariables}
-        self._unzip = unzip
-        self.md = md
+        
+        # Build value reference map
+        self.refs = {}
+        for var in self._desc.modelVariables:
+            self.refs[var.name] = var.valueReference
+
+# ============================
+# === 3.2) Helper Functions for Auto-Generation
+# ============================
+def negate_guard_expression(expr):
+    """Convert a guard expression to its logical negation."""
+    def parse_expression(expr):
+        expr = expr.strip()
+        if expr.startswith('(') and expr.endswith(')'):
+            depth = 0
+            for i, char in enumerate(expr):
+                if char == '(':
+                    depth += 1
+                elif char == ')':
+                    depth -= 1
+                if depth == 0 and i < len(expr) - 1:
+                    break
+            if i == len(expr) - 1:
+                return parse_expression(expr[1:-1])
+        
+        depth = 0
+        for op in [' or ', ' and ']:
+            for i in range(len(expr)):
+                if expr[i] == '(':
+                    depth += 1
+                elif expr[i] == ')':
+                    depth -= 1
+                elif depth == 0 and expr[i:i+len(op)] == op:
+                    left = expr[:i]
+                    right = expr[i+len(op):]
+                    return ('or' if op == ' or ' else 'and', 
+                           parse_expression(left), 
+                           parse_expression(right))
+        return ('atom', expr)
+    
+    def negate_tree(tree):
+        if tree[0] == 'atom':
+            atom = tree[1].strip()
+            for op, neg_op in [('>=', '<'), ('>', '<='), ('<=', '>'), ('<', '>='), ('==', '!='), ('!=', '==')]:
+                if op in atom:
+                    parts = atom.split(op, 1)
+                    if len(parts) == 2:
+                        return ('atom', f'{parts[0].strip()} {neg_op} {parts[1].strip()}')
+            return ('atom', f'not ({atom})')
+        elif tree[0] == 'and':
+            return ('or', negate_tree(tree[1]), negate_tree(tree[2]))
+        elif tree[0] == 'or':
+            return ('and', negate_tree(tree[1]), negate_tree(tree[2]))
+    
+    def tree_to_string(tree, parent_op=None):
+        if tree[0] == 'atom':
+            return tree[1]
+        elif tree[0] in ('and', 'or'):
+            left = tree_to_string(tree[1], tree[0])
+            right = tree_to_string(tree[2], tree[0])
+            result = f'{left} {tree[0]} {right}'
+            if parent_op is not None and parent_op != tree[0]:
+                result = f'({result})'
+            return result
+    
+    tree = parse_expression(expr)
+    negated_tree = negate_tree(tree)
+    result = tree_to_string(negated_tree)
+    return result
+
+def guard_to_lambda(guard_expr, global_vars):
+    """Convert a guard expression string to a lambda function."""
+    modified_expr = guard_expr
+    # Use the actual global variables defined in config
+    for var in global_vars:
+        modified_expr = modified_expr.replace(var, f"g['{var}']")
+    return eval(f"lambda g: {modified_expr}")
 
 # ============================
 # === 4) Simulation Engine
@@ -350,6 +440,19 @@ class SimulationEngine:
         self.time = sim_cfg['initial_time']
         self.logs = defaultdict(list)
         self.prev_vals = {}
+        
+        # Auto-generate stop conditions from deactivation guards
+        for mode_name in sim_cfg['modes'].keys():
+            if 'stop_condition' not in sim_cfg['modes'][mode_name]:
+                deactivate_guard_name = f'Deactivate_{mode_name}'
+                if deactivate_guard_name in self.petri.guards:
+                    guard_expr = self.petri.guards[deactivate_guard_name]
+                    # Pass the global variables from config
+                    sim_cfg['modes'][mode_name]['stop_condition'] = guard_to_lambda(
+                        guard_expr, 
+                        context_cfg['globals']
+                    )
+                    print(f"Auto-generated stop_condition for {mode_name}: {guard_expr}")
 
     def run(self):
         print(f"Starting simulation: t={self.time}s to t={self.config['stop_time']}s")

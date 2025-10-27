@@ -5,6 +5,7 @@
 
 import shutil
 import matplotlib.pyplot as plt
+import re
 from collections import defaultdict
 from itertools import permutations
 from snakes.nets import PetriNet, Place, Transition, Expression, Inhibitor, Value
@@ -25,16 +26,12 @@ context_cfg = {
     'globals': ['hydrogenProduction', 'loadDemand'],
     'guards': {
         'Activate_greenSupply':   'hydrogenProduction >= loadDemand',
-        'Deactivate_greenSupply': 'hydrogenProduction <  loadDemand',
         'Activate_hybridSupply':  'hydrogenProduction <  loadDemand',
-        'Deactivate_hybridSupply':'hydrogenProduction >= loadDemand',
         'Activate_energySavingMode':'loadDemand <  150',
-        'Deactivate_energySavingMode':'loadDemand >= 150',
         'Activate_normalMode':    'loadDemand >= 150 and loadDemand < 200',
-        'Deactivate_normalMode':  'loadDemand < 150 or loadDemand >= 200',
         'Activate_highPerformanceMode':  'loadDemand >= 200',
-        'Deactivate_highPerformanceMode':'loadDemand < 200'
     },
+    'auto_generate_deactivation': True,  # Enable auto-generation
     'relations': {
         'exclusion': [
             ['greenSupply','hybridSupply'],
@@ -61,7 +58,6 @@ sim_cfg = {
                 'cores': {'energySavingMode':2,'normalMode':4,'highPerformanceMode':8,'default':1},
                 'freq':  {'energySavingMode':2.0,'normalMode':3.0,'highPerformanceMode':4.0,'default':1.0}
             },
-            'stop_condition': lambda g: g['hydrogenProduction'] < g['loadDemand']
         },
         'hybridSupply': {
             'fmu':       'ITSystem_HybridSupply.fmu',
@@ -70,7 +66,6 @@ sim_cfg = {
                 'cores': {'energySavingMode':2,'normalMode':4,'highPerformanceMode':8,'default':1},
                 'freq':  {'energySavingMode':2.0,'normalMode':3.0,'highPerformanceMode':4.0,'default':1.0}
             },
-            'stop_condition': lambda g: g['hydrogenProduction'] >= g['loadDemand']
         }
     },
     # Mode-specific variable mappings
@@ -135,10 +130,51 @@ plot_cfg = {
 class ContextPetriNet:
     def __init__(self, cfg):
         self.net = PetriNet('ContextPetriNet')
-        self.globals = {g:0 for g in cfg['globals']}
+        self.globals = {g: 0 for g in cfg['globals']}
+        
+        # Auto-generate deactivation guards if enabled
+        self.guards = cfg['guards'].copy()
+        if cfg.get('auto_generate_deactivation', False):
+            self._auto_generate_deactivation_guards(cfg['guards'])
+        
         self._build_places(cfg['places'])
-        self._build_transitions(cfg['places'], cfg['guards'])
-        self._apply_relations(cfg['relations'], cfg['guards'])
+        self._build_transitions(cfg['places'], self.guards)
+        self._apply_relations(cfg['relations'], self.guards)
+    
+    def _auto_generate_deactivation_guards(self, guards):
+        """Auto-generate deactivation guards as negations of activation guards."""
+        for guard_name, guard_expr in guards.items():
+            if guard_name.startswith('Activate_'):
+                context_name = guard_name[9:]
+                deactivate_name = f'Deactivate_{context_name}'
+                
+                if deactivate_name not in guards:
+                    negated_expr = negate_guard_expression(guard_expr)
+                    self.guards[deactivate_name] = negated_expr
+                    print(f"Auto-generated: {deactivate_name} = {negated_expr}")
+
+    def _preprocess_guard(self, guard_str):
+        """
+        Convert variable names with dots to dictionary access.
+        Example: 'battery.SOC > 0.2' -> 'globals["battery.SOC"] > 0.2'
+        """
+        # Match variable names: letters, numbers, dots, underscores
+        # But not numeric literals like '0.2'
+        pattern = r'\b([a-zA-Z_][a-zA-Z0-9_.]*)\b'
+        
+        def replace_var(match):
+            var_name = match.group(1)
+            # Don't replace Python keywords
+            keywords = ('and', 'or', 'not', 'True', 'False', 'None', 'in', 'is')
+            if var_name in keywords:
+                return var_name
+            # If it's in our globals or contains a dot, replace with dictionary access
+            if var_name in self.globals or '.' in var_name:
+                return f'__globals__["{var_name}"]'
+            return var_name
+        
+        preprocessed = re.sub(pattern, replace_var, guard_str)
+        return preprocessed
 
     def _build_places(self, places):
         for name, params in places.items():
@@ -149,8 +185,12 @@ class ContextPetriNet:
     def _build_transitions(self, places, guards):
         for name in places:
             act, deact = f"Activate_{name}", f"Deactivate_{name}"
-            self.net.add_transition(Transition(act,   Expression(guards[act])))
-            self.net.add_transition(Transition(deact, Expression(guards[deact])))
+            # Preprocess guard expressions to handle dots
+            act_guard = self._preprocess_guard(guards[act])
+            deact_guard = self._preprocess_guard(guards[deact])
+            
+            self.net.add_transition(Transition(act, Expression(act_guard)))
+            self.net.add_transition(Transition(deact, Expression(deact_guard)))
             self.net.add_input(f"{name}_ModeSwitch", act, Value(1))
             self.net.add_output(name, act, Value(1))
             self.net.add_input(name, deact, Value(1))
@@ -164,67 +204,56 @@ class ContextPetriNet:
 
         # weak inclusions: source weakly includes target
         for src, tgt in rel.get('weak_inclusions', []):
-            # 1) source activation -> target place
             self.net.add_output(tgt, f"Activate_{src}", Value(1))
-            # 2) duplicate source deactivation
             dup = f"Deactivate_{src}_weak_{tgt}"
-            guard = guards[f"Deactivate_{src}"]
+            guard = self._preprocess_guard(guards[f"Deactivate_{src}"])
             self.net.add_transition(Transition(dup, Expression(guard)))
-            # 3) source place -> duplicated deactivation
             self.net.add_input(src, dup, Value(1))
-            # 4) inhibitor from target place -> duplicated deactivation
             self.net.add_input(tgt, dup, Inhibitor(Value(1)))
-            # 5) target place -> original source deactivation
             self.net.add_input(tgt, f"Deactivate_{src}", Value(1))
 
         # strong inclusions: source strongly includes target
         for src, tgt in rel.get('strong_inclusions', []):
-            # 1) target activation -> source place
             self.net.add_output(src, f"Activate_{tgt}", Value(1))
-            # 2) duplicate target deactivation
             dup = f"Deactivate_{tgt}_strong_{src}"
-            guard = guards[f"Deactivate_{tgt}"]
+            guard = self._preprocess_guard(guards[f"Deactivate_{tgt}"])
             self.net.add_transition(Transition(dup, Expression(guard)))
-            # 3) inhibitor from source place -> duplicated deactivation
             self.net.add_input(src, dup, Inhibitor(Value(1)))
-            # 4) target place -> duplicated deactivation
             self.net.add_input(tgt, dup, Value(1))
-            # 5) source place -> original target deactivation
             self.net.add_input(src, f"Deactivate_{tgt}", Value(1))
 
         # requirements: dependent requires required
         for dep, req in rel.get('requirements', []):
-            # 1) req place -> dep activation
             self.net.add_input(req, f"Activate_{dep}", Value(1))
-            # 2) dep activation -> req place
             self.net.add_output(req, f"Activate_{dep}", Value(1))
-            # 3) duplicate req deactivation
             dup = f"Deactivate_{req}_req_{dep}"
-            guard = guards[f"Deactivate_{req}"]
+            guard = self._preprocess_guard(guards[f"Deactivate_{req}"])
             self.net.add_transition(Transition(dup, Expression(guard)))
-            # 4) req place -> duplicated deactivation
             self.net.add_input(req, dup, Value(1))
-            # 5) dep place -> duplicated deactivation
             self.net.add_input(dep, dup, Value(1))
-            # 6) inhibitor from dep place -> original req deactivation
             self.net.add_input(dep, f"Deactivate_{req}", Inhibitor(Value(1)))
 
     def fire(self):
-        # Update the net's globals with current values
+        # Update the net's global namespace
+        # SNAKES accesses globals through the net.globals dictionary
         for key, value in self.globals.items():
             self.net.globals[key] = value
+        
+        # Also create __globals__ for the preprocessed guards
+        self.net.globals['__globals__'] = dict(self.globals)
         
         # Keep firing until no more transitions can fire
         fired_any = True
         iteration = 0
         max_iterations = 10
         
-        while fired_any and iteration < max_iterations:  # Safety limit
+        while fired_any and iteration < max_iterations:
             fired_any = False
             iteration += 1
             
             for t in self.net.transition():
                 try:
+                    # modes() will use net.globals automatically
                     modes = t.modes()
                     modes_list = list(modes)
                     
@@ -237,52 +266,97 @@ class ContextPetriNet:
 
         if iteration >= max_iterations:
             print(f"Warning: fire() reached maximum iterations ({max_iterations})")
-    
+
 # ============================
-# === 3) FMU Wrapper
+# === 3.1) FMU Instance Helper
 # ============================
 class FMUInstance:
-    def __init__(self, fmu_path, name):
-        md = read_model_description(fmu_path)
-        unzip = extract(fmu_path)
+    def __init__(self, fmu_path, mode_name):
+        self._unzip = extract(fmu_path)
+        self._desc = read_model_description(self._unzip)
         self.fmu = FMU3Slave(
-            guid=md.guid,
-            unzipDirectory=unzip,
-            modelIdentifier=md.coSimulation.modelIdentifier,
-            instanceName=name
+            guid=self._desc.guid,
+            unzipDirectory=self._unzip,
+            modelIdentifier=self._desc.coSimulation.modelIdentifier,
+            instanceName=f"FMU_{mode_name}"
         )
-        self.refs = {v.name:v.valueReference for v in md.modelVariables}
-        self._unzip = unzip
+        
+        # Build value reference map
+        self.refs = {}
+        for var in self._desc.modelVariables:
+            self.refs[var.name] = var.valueReference
 
-    def initialize(self, t0, tf):
-        self.fmu.instantiate()
-        self.fmu.enterInitializationMode(startTime=t0, stopTime=tf)
-        self.fmu.exitInitializationMode()
-
-    def do_step(self, t, h):
-        self.fmu.doStep(
-            currentCommunicationPoint=t,
-            communicationStepSize=h,
-            noSetFMUStatePriorToCurrentPoint=False
-        )
-
-    def read(self, names):
-        return self.fmu.getFloat64([self.refs[n] for n in names])
-
-    def write_params(self, rules, petri):
-        for pname, rule in rules.items():
-            val = rule.get('default')
-            for place, v in rule.items():
-                if place!='default' and petri.net.place(place).tokens:
-                    val = v
+# ============================
+# === 3.2) Helper Functions for Auto-Generation
+# ============================
+def negate_guard_expression(expr):
+    """Convert a guard expression to its logical negation."""
+    def parse_expression(expr):
+        expr = expr.strip()
+        if expr.startswith('(') and expr.endswith(')'):
+            depth = 0
+            for i, char in enumerate(expr):
+                if char == '(':
+                    depth += 1
+                elif char == ')':
+                    depth -= 1
+                if depth == 0 and i < len(expr) - 1:
                     break
-            if val is not None:
-                self.fmu.setFloat64([self.refs[pname]], [val])
+            if i == len(expr) - 1:
+                return parse_expression(expr[1:-1])
+        
+        depth = 0
+        for op in [' or ', ' and ']:
+            for i in range(len(expr)):
+                if expr[i] == '(':
+                    depth += 1
+                elif expr[i] == ')':
+                    depth -= 1
+                elif depth == 0 and expr[i:i+len(op)] == op:
+                    left = expr[:i]
+                    right = expr[i+len(op):]
+                    return ('or' if op == ' or ' else 'and', 
+                           parse_expression(left), 
+                           parse_expression(right))
+        return ('atom', expr)
+    
+    def negate_tree(tree):
+        if tree[0] == 'atom':
+            atom = tree[1].strip()
+            for op, neg_op in [('>=', '<'), ('>', '<='), ('<=', '>'), ('<', '>='), ('==', '!='), ('!=', '==')]:
+                if op in atom:
+                    parts = atom.split(op, 1)
+                    if len(parts) == 2:
+                        return ('atom', f'{parts[0].strip()} {neg_op} {parts[1].strip()}')
+            return ('atom', f'not ({atom})')
+        elif tree[0] == 'and':
+            return ('or', negate_tree(tree[1]), negate_tree(tree[2]))
+        elif tree[0] == 'or':
+            return ('and', negate_tree(tree[1]), negate_tree(tree[2]))
+    
+    def tree_to_string(tree, parent_op=None):
+        if tree[0] == 'atom':
+            return tree[1]
+        elif tree[0] in ('and', 'or'):
+            left = tree_to_string(tree[1], tree[0])
+            right = tree_to_string(tree[2], tree[0])
+            result = f'{left} {tree[0]} {right}'
+            if parent_op is not None and parent_op != tree[0]:
+                result = f'({result})'
+            return result
+    
+    tree = parse_expression(expr)
+    negated_tree = negate_tree(tree)
+    result = tree_to_string(negated_tree)
+    return result
 
-    def terminate(self):
-        self.fmu.terminate()
-        self.fmu.freeInstance()
-        shutil.rmtree(self._unzip)
+def guard_to_lambda(guard_expr, global_vars):
+    """Convert a guard expression string to a lambda function."""
+    modified_expr = guard_expr
+    # Use the actual global variables defined in config
+    for var in global_vars:
+        modified_expr = modified_expr.replace(var, f"g['{var}']")
+    return eval(f"lambda g: {modified_expr}")
 
 # ============================
 # === 4) Simulation Engine
@@ -294,75 +368,171 @@ class SimulationEngine:
         self.config['plot_cfg'] = plot_cfg
         self.time = sim_cfg['initial_time']
         self.logs = defaultdict(list)
-        self.persistent_vars = {}
+        self.prev_vals = {}
+        
+        # Auto-generate stop conditions from deactivation guards
+        for mode_name in sim_cfg['modes'].keys():
+            if 'stop_condition' not in sim_cfg['modes'][mode_name]:
+                deactivate_guard_name = f'Deactivate_{mode_name}'
+                if deactivate_guard_name in self.petri.guards:
+                    guard_expr = self.petri.guards[deactivate_guard_name]
+                    # Pass the global variables from config
+                    sim_cfg['modes'][mode_name]['stop_condition'] = guard_to_lambda(
+                        guard_expr, 
+                        context_cfg['globals']
+                    )
+                    print(f"Auto-generated stop_condition for {mode_name}: {guard_expr}")
 
     def run(self):
         print(f"Starting simulation: t={self.time}s to t={self.config['stop_time']}s")
         iteration = 0
         current_logged_mode = None
-        
+
+        # Safety parameters
+        MAX_ITER = 5_000_000
+        STUCK_LIMIT = 1
+        last_globals_snapshot = dict(self.petri.globals)
+        last_token_snapshot = {p.name: bool(p.tokens) for p in self.petri.net.place()}
+        stuck_counter = 0
+
         try:
             while self.time < self.config['stop_time']:
                 iteration += 1
-                
+                if iteration > MAX_ITER:
+                    print(f"Aborting: reached MAX_ITER = {MAX_ITER}")
+                    break
+
                 # Determine the current mode
                 mode = next((p.name for p in self.petri.net.place()
                             if p.tokens and p.name in self.config['modes']), None)
-                
+
                 if not mode:
                     print("No active mode found. Simulation complete.")
                     break
-                
-                # Log mode switch only when it changes
+
+                # Mode change logging
                 if mode != current_logged_mode:
+                    print(f"[{iteration}] Mode switched to: {mode} at t={self.time:.1f}s")
                     self.logs['mode'].append((self.time, mode))
                     current_logged_mode = mode
-                    
+
                 cfg = self.config['modes'][mode]
+
+                # Check stop_condition before creating FMU
+                cond = cfg['stop_condition']
+                try:
+                    cond_now = bool(cond(self.petri.globals))
+                except Exception as e:
+                    print(f"Error evaluating stop_condition for mode {mode}: {e}")
+                    cond_now = False
+
+                if cond_now:
+                    # Mode should end immediately - save values and fire Petri net
+                    for var in cfg.get('outputs', []):
+                        self.prev_vals[var] = self.petri.globals.get(var)
+                    
+                    prev_tokens = {p.name: bool(p.tokens) for p in self.petri.net.place()}
+                    self.petri.fire()
+                    new_tokens = {p.name: bool(p.tokens) for p in self.petri.net.place()}
+                    
+                    if prev_tokens == new_tokens:
+                        stuck_counter += 1
+                        if stuck_counter >= STUCK_LIMIT:
+                            raise RuntimeError(f"Stuck trying to exit mode '{mode}' at t={self.time}: no token changes.")
+                    else:
+                        stuck_counter = 0
+                    continue
+
+                # Create and initialize FMU
                 fmu = None
-                
                 try:
                     fmu = FMUInstance(cfg['fmu'], mode)
-                    fmu.initialize(self.time, self.config['stop_time'])
+                    fmu.fmu.instantiate()
 
-                    # Restore persistent variables
-                    for var, value in self.persistent_vars.items():
-                        mapped_var = self._map_variable(var, mode)
-                        if mapped_var in cfg['parameters']:
-                            fmu.write_params({mapped_var: {'default': value}}, self.petri)
+                    # Set initial values from previous mode (before initialization)
+                    if self.prev_vals:
+                        print(f"  Restoring {len(self.prev_vals)} variable(s) from previous mode")
+                        for var in cfg.get('outputs', []):
+                            if var in self.prev_vals and var in fmu.refs:
+                                fmu.fmu.setFloat64([fmu.refs[var]], [self.prev_vals[var]])
 
-                    # Run the simulation for the current mode
-                    cond = cfg['stop_condition']
+                    # Initialize FMU
+                    fmu.fmu.enterInitializationMode(
+                        startTime=self.time,
+                        stopTime=self.config['stop_time']
+                    )
+                    fmu.fmu.exitInitializationMode()
+
+                    # Simulation loop
+                    inner_iter = 0
                     while self.time < self.config['stop_time'] and not cond(self.petri.globals):
-                        fmu.write_params(cfg['parameters'], self.petri)
-                        fmu.do_step(self.time, self.config['step_size'])
-                        vals = fmu.read(cfg['outputs'])
+                        inner_iter += 1
 
-                        for n,v in zip(cfg['outputs'], vals):
-                            self.petri.globals[n]=v
+                        # Execute simulation step
+                        step = self.config['step_size']
+                        if step <= 0:
+                            raise ValueError("step_size must be > 0")
+                        
+                        fmu.fmu.doStep(
+                            currentCommunicationPoint=self.time,
+                            communicationStepSize=step,
+                            noSetFMUStatePriorToCurrentPoint=False
+                        )
+                        
+                        # Read and log outputs
+                        vals = fmu.fmu.getFloat64([fmu.refs[n] for n in cfg.get('outputs', [])])
+                        for n, v in zip(cfg.get('outputs', []), vals):
+                            self.petri.globals[n] = v
                             self.logs[n].append((self.time, v))
-                        
-                        self._log_context_states()
-                        self.petri.fire()
-                        self.time += self.config['step_size']
 
-                    # Save persistent vars
-                    for var in cfg['outputs']:
-                        mapped_var = self._map_variable(var, mode, reverse=True)
-                        self.persistent_vars[mapped_var] = self.petri.globals[var]
-                        
+                        # Periodic progress logging
+                        if inner_iter % 100 == 0:
+                            status = ', '.join([f"{k}={v:.4f}" for k, v in self.petri.globals.items()])
+                            print(f"  [t={self.time:.1f}s] {status}")
+
+                        # Log context states and fire Petri net transitions
+                        self._log_context_states()
+                        prev_tokens = {p.name: bool(p.tokens) for p in self.petri.net.place()}
+                        self.petri.fire()
+                        new_tokens = {p.name: bool(p.tokens) for p in self.petri.net.place()}
+
+                        # Advance time
+                        prev_time = self.time
+                        self.time += step
+
+                        # Progress detection (prevent infinite loops)
+                        globals_changed = any(self.petri.globals.get(k) != last_globals_snapshot.get(k)
+                                            for k in self.petri.globals)
+                        tokens_changed = (new_tokens != last_token_snapshot) or (prev_tokens != new_tokens)
+
+                        if globals_changed or tokens_changed or (self.time != prev_time):
+                            stuck_counter = 0
+                            last_globals_snapshot = dict(self.petri.globals)
+                            last_token_snapshot = new_tokens
+                        else:
+                            stuck_counter += 1
+                            if stuck_counter >= STUCK_LIMIT:
+                                raise RuntimeError(f"Simulation appears stuck at t={self.time}: no changes detected.")
+
+                    # Save values on normal exit from mode
+                    for var in cfg.get('outputs', []):
+                        self.prev_vals[var] = self.petri.globals.get(var)
+
                 except Exception as e:
                     print(f"Error in mode {mode}: {e}")
                     import traceback
                     traceback.print_exc()
                     break
                 finally:
+                    # Cleanup FMU resources
                     if fmu is not None:
                         try:
-                            fmu.terminate()
+                            fmu.fmu.terminate()
+                            fmu.fmu.freeInstance()
+                            shutil.rmtree(fmu._unzip)
                         except Exception as e:
                             print(f"Error terminating FMU: {e}")
-                            
+
         except KeyboardInterrupt:
             print("\nSimulation interrupted by user")
         except Exception as e:
@@ -374,35 +544,41 @@ class SimulationEngine:
             self._plot()
 
     def _log_context_states(self):
-        """Log token state (1 or 0) of all context places."""
+        """Log token state (1 or 0) of all context places, including aggregated states."""
         plot_cfg = self.config.get('plot_cfg', {})
         subplot_cfgs = plot_cfg.get('subplots', [])
+        context_groups = plot_cfg.get('context_groups', {})
 
-        # Extract all contexts from all subplots that have type 'context_states'
         for sub_cfg in subplot_cfgs:
             if sub_cfg.get('type') == 'context_states':
-                contexts = sub_cfg.get('contexts', [])
-                for ctx in contexts:
-                    state_key = f'{ctx}_state'
-                    self.logs[state_key].append(
-                        (self.time, 1 if self.petri.net.place(ctx).tokens else 0)
-                    )
-
-    def _map_variable(self, var, mode, reverse=False):
-        """Map a variable name based on the variable_mapping configuration."""
-        mapping = self.config.get('variable_mapping', {})
-        if reverse:
-            # Reverse mapping: map mode-specific variable back to global variable
-            for (src_mode, src_var), (tgt_mode, tgt_var) in mapping.items():
-                if tgt_mode == mode and tgt_var == var:
-                    return src_var
-        else:
-            # Forward mapping: map global variable to mode-specific variable
-            for (src_mode, src_var), (tgt_mode, tgt_var) in mapping.items():
-                if src_mode == mode and src_var == var:
-                    return tgt_var
-        return var
-
+                # Check if this subplot uses aggregation
+                if sub_cfg.get('aggregate', False):
+                    # For aggregated subplots, log parent context states
+                    contexts = sub_cfg.get('contexts', [])
+                    for parent_ctx in contexts:
+                        # Get children from context_groups
+                        children = context_groups.get(parent_ctx, [])
+                        # Check if ANY child context is active
+                        is_any_child_active = any(
+                            self.petri.net.place(child).tokens 
+                            for child in children 
+                            if child in [p.name for p in self.petri.net.place()]
+                        )
+                        state_key = f'{parent_ctx}_state'
+                        self.logs[state_key].append((self.time, 1 if is_any_child_active else 0))
+                else:
+                    # For non-aggregated subplots, log individual context states
+                    contexts = sub_cfg.get('contexts', [])
+                    for ctx in contexts:
+                        state_key = f'{ctx}_state'
+                        try:
+                            self.logs[state_key].append(
+                                (self.time, 1 if self.petri.net.place(ctx).tokens else 0)
+                            )
+                        except Exception:
+                            # Context doesn't exist, skip
+                            pass
+                    
     def _plot(self):
         if not self.logs:
             print("No data to plot")
@@ -413,12 +589,10 @@ class SimulationEngine:
             print("No plot configuration found")
             return
         
-        # Get figure settings
         fig_cfg = plot_cfg.get('figure', {})
         figsize = fig_cfg.get('figsize', (12, 10))
         height_ratios = fig_cfg.get('height_ratios', [1, 0.3, 0.3])
         
-        # Get subplot configurations
         subplot_cfgs = plot_cfg.get('subplots', [])
         n_subplots = len(subplot_cfgs)
         
@@ -426,7 +600,6 @@ class SimulationEngine:
             print("[PLOT] No subplots configured")
             return
         
-        # Create figure with subplots
         fig, axes = plt.subplots(
             n_subplots, 1, 
             figsize=figsize, 
@@ -434,16 +607,13 @@ class SimulationEngine:
             gridspec_kw={'height_ratios': height_ratios[:n_subplots]}
         )
         
-        # Make axes iterable even if only one subplot
         if n_subplots == 1:
             axes = [axes]
         
-        # Plot each subplot
         for ax, sub_cfg in zip(axes, subplot_cfgs):
             subplot_type = sub_cfg.get('type', 'variables')
             
             if subplot_type == 'context_states':
-                # Plot context states (binary token values)
                 contexts = sub_cfg.get('contexts', [])
                 labels = sub_cfg.get('labels', contexts)
                 colors = sub_cfg.get('colors', ['blue'] * len(contexts))
@@ -457,14 +627,12 @@ class SimulationEngine:
                         ax.plot(times, states, label=label, linewidth=linewidth, 
                             color=color, drawstyle='steps-post')
                 
-                # Set y-axis limits and ticks for binary states
                 ylim = sub_cfg.get('ylim', (-0.1, 1.1))
                 yticks = sub_cfg.get('yticks', [0, 1])
                 ax.set_ylim(ylim)
                 ax.set_yticks(yticks)
             
             else:
-                # Plot regular variables
                 variables = sub_cfg.get('variables', [])
                 labels = sub_cfg.get('labels', variables)
                 colors = sub_cfg.get('colors', ['blue'] * len(variables))
@@ -478,7 +646,6 @@ class SimulationEngine:
                         ax.plot(times, vals, label=label, linewidth=linewidth,
                             color=color, linestyle=linestyle)
             
-            # Set subplot properties
             title = sub_cfg.get('title', '')
             ylabel = sub_cfg.get('ylabel', '')
             xlabel = sub_cfg.get('xlabel', None)
@@ -494,7 +661,6 @@ class SimulationEngine:
             if plot_cfg.get('grid', True):
                 ax.grid(True, alpha=0.3)
         
-        # Add mode switch vertical lines
         mode_switch_cfg = plot_cfg.get('mode_switches', {})
         if mode_switch_cfg.get('show', True):
             mode_data = self.logs.get('mode', [])
