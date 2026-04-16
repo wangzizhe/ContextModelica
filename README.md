@@ -32,3 +32,9 @@ Parses a **monolithic Modelica model** and generates mode-specific FMUs
 ## 👀 License
 
 This project is licensed under the [MIT License](./LICENSE)
+
+## 📄 Citation
+
+[Context-Oriented Modelica for Advanced Variability Management](https://www.ecp.ep.liu.se/index.php/modelica/article/view/1303)
+
+DOI: https://doi.org/10.3384/ecp218165
