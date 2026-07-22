@@ -35,6 +35,6 @@ This project is licensed under the [MIT License](./LICENSE)
 
 ## 📄 Citation
 
-[Context-Oriented Modelica for Advanced Variability Management](https://www.ecp.ep.liu.se/index.php/modelica/article/view/1303)
+[Context-Oriented Modelica for Advanced Variability Management](https://www.ecp.ep.liu.se/index.php/modelica/article/view/1303) (DOI: https://doi.org/10.3384/ecp218165)
 
-DOI: https://doi.org/10.3384/ecp218165
+[PhD Thesis: Context-Oriented Modelica for Advanced Variability Management](https://nbn-resolving.org/urn:nbn:de:bsz:14-qucosa2-1055309)
